@@ -111,6 +111,14 @@ def generar_orden_trabajo_mapfre(
     ws[CELDA_AGENTE_NOMBRE] = AGENTE_NOMBRE
     ws[CELDA_INSTRUCCIONES] = datos["instrucciones"]
 
+    # Márgenes de impresión — sin esto, "SinglePageSheets" estira el
+    # contenido hasta pegarlo a los bordes de la hoja (confirmado: así
+    # se veía, sin espacio en blanco alrededor).
+    ws.page_margins.left = 0.5
+    ws.page_margins.right = 0.5
+    ws.page_margins.top = 0.5
+    ws.page_margins.bottom = 0.5
+
     with tempfile.TemporaryDirectory() as tmpdir:
         xlsx_temp = os.path.join(tmpdir, "orden_trabajo.xlsx")
         wb.save(xlsx_temp)
