@@ -1,0 +1,7 @@
+flask
+playwright
+xlwt
+xlutils
+xlrd
+pypdf
+requests
