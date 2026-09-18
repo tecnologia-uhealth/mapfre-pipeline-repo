@@ -4,5 +4,6 @@ xlwt
 xlutils
 xlrd
 openpyxl
+Pillow
 pypdf
 requests
