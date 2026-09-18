@@ -3,5 +3,6 @@ playwright
 xlwt
 xlutils
 xlrd
+openpyxl
 pypdf
 requests
