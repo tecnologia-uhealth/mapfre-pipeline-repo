@@ -1,0 +1,13 @@
+# Forzar que Git trate estos archivos como binarios puros —
+# sin esto, en Windows Git puede corromperlos al cambiar los saltos
+# de línea (\n -> \r\n), lo cual destruye archivos .xlsx/.xls/.pdf
+# (esto fue justo lo que pasó con OT_MAPFRE_template.xlsx: llegó al
+# servidor sin las imágenes incrustadas porque se corrompió al subirse).
+
+*.xlsx binary
+*.xls binary
+*.pdf binary
+*.docx binary
+*.png binary
+*.jpg binary
+*.jpeg binary
