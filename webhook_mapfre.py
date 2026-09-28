@@ -17,7 +17,7 @@ from flask import Flask, request, jsonify
 
 from generar_concentrado_mapfre import generar_concentrado_altas_mapfre
 from generar_ot_mapfre import generar_orden_trabajo_mapfre
-from rpa_mapfre import emitir_movimiento_mapfre, TipoMovimientoNoConfirmadoError
+from rpa_mapfre import emitir_movimiento_mapfre, TipoMovimientoNoConfirmadoError, RPAError
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("webhook_mapfre")
@@ -111,6 +111,14 @@ def webhook_mapfre():
     except TipoMovimientoNoConfirmadoError as e:
         log.error(f"Tipo de movimiento no soportado: {e}")
         return jsonify({"ok": False, "error": str(e)}), 500
+
+    except RPAError as e:
+        log.exception("Error del RPA en Mapfre")
+        return jsonify({
+            "ok": False,
+            "error": str(e),
+            "screenshot_base64": e.screenshot_base64,  # decodificable para ver qué pasaba
+        }), 500
 
     except Exception as e:
         log.exception("Error procesando movimiento Mapfre")
