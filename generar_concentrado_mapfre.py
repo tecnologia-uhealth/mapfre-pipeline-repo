@@ -78,47 +78,50 @@ def generar_concentrado_altas_mapfre(asegurados: list[dict], no_poliza: str, sal
     ws = wb.add_sheet('G.M.M.')
 
     formato_fecha = xlwt.easyxf(
-        'font: bold off; borders: left thin, right thin, top thin, bottom thin;'
-        'align: horiz center;',
         num_format_str='DD/MM/YYYY'
     )
 
-    # Encabezado: fondo azul oscuro, letra blanca en negrita, bordes —
-    # solo en las 9 columnas que de verdad se usan, para que resalten;
-    # el resto de los encabezados (sin usar) quedan sin formato.
-    COLUMNAS_USADAS = {0, 5, 6, 7, 8, 9, 10, 11, 20}
-    estilo_encabezado_usado = xlwt.easyxf(
-        'font: bold on, color white;'
-        'pattern: pattern solid, fore_color dark_blue;'
+    # Estilos confirmados contra la plantilla real (CONCENTRADO_ALTAS__1_.xls)
+    # — NO son inventados: se sacaron inspeccionando el formato exacto de
+    # cada fila con xlrd(formatting_info=True). El portal de Mapfre es
+    # estricto con que el layout coincida, así que aquí no se adorna nada
+    # que la plantilla original no tuviera.
+    #   Fila 1 (encabezados):        sin relleno, sin negrita, sin bordes.
+    #   Fila 2 (spec. de anchos):    relleno amarillo pálido RGB(255,255,153),
+    #                                bordes delgados en las 4 direcciones.
+    #   Filas de datos:              sin relleno, sin bordes.
+    xlwt.add_palette_colour("amarillo_spec", 0x21)
+    estilo_encabezado = xlwt.XFStyle()  # sin ningún formato, igual que el original
+    estilo_fila_spec = xlwt.easyxf(
+        'pattern: pattern solid, fore_color amarillo_spec;'
         'borders: left thin, right thin, top thin, bottom thin;'
-        'align: horiz center, wrap on;'
     )
-    estilo_encabezado_sin_usar = xlwt.easyxf(
-        'font: bold on, color gray50;'
-        'pattern: pattern solid, fore_color gray25;'
-        'borders: left thin, right thin, top thin, bottom thin;'
-        'align: horiz center, wrap on;'
-    )
-    estilo_celda = xlwt.easyxf(
-        'borders: left thin, right thin, top thin, bottom thin;'
-        'align: horiz center;'
-    )
-    estilo_celda_texto = xlwt.easyxf(
-        'borders: left thin, right thin, top thin, bottom thin;'
-        'align: horiz left;'
-    )
+    estilo_celda = xlwt.XFStyle()  # sin formato, igual que el original
+    estilo_celda_texto = xlwt.XFStyle()  # sin formato, igual que el original
 
     ws.set_panes_frozen(True)
     ws.set_horz_split_pos(1)  # Congela la fila de encabezados al hacer scroll
 
     for col, encabezado in enumerate(HEADERS):
-        estilo = estilo_encabezado_usado if col in COLUMNAS_USADAS else estilo_encabezado_sin_usar
-        ws.write(0, col, encabezado, estilo)
+        ws.write(0, col, encabezado, estilo_encabezado)
         ws.col(col).width = 256 * max(14, min(len(encabezado) + 2, 28))
-    ws.row(0).height = 700  # más alta para que quepan encabezados en 2 líneas
+
+    # Fila 2 (índice 1) — fila FIJA de especificación de anchos de columna
+    # que el portal de Mapfre exige tal cual, con estos valores exactos
+    # confirmados por Carlos. Si se omite o se sobreescribe con datos, el
+    # portal rechaza el archivo por no parecerse al layout esperado.
+    FILA_ESPECIFICACION_ANCHOS = [
+        13, 5, 3, 20, 13, 30, 30, 30, 2, 8, 2, 1, 4, 3, 1, 8, 8, 8, 8, 8,
+        8, 5, 5, 7, 7, 7, 7, 7, 1, 7, 30, 30, 8, 8, 30, 30, 30, 30, 30,
+    ]
+    wb.set_colour_RGB(0x21, 255, 255, 153)
+    for col, valor in enumerate(FILA_ESPECIFICACION_ANCHOS):
+        ws.write(1, col, valor, estilo_fila_spec)
 
     hoy = date.today()
-    for fila_idx, a in enumerate(asegurados, start=1):
+    # Los datos reales empiezan en la fila 3 (índice 2) — la fila 2 ya la
+    # ocupa la especificación de anchos, no debe pisarse con datos.
+    for fila_idx, a in enumerate(asegurados, start=2):
         fecha_nac = _parse_fecha(a["fecha_nacimiento"])
         codigo_parentesco = CODIGO_PARENTESCO.get(a.get("parentesco", ""))
         if codigo_parentesco is None:
@@ -137,6 +140,7 @@ def generar_concentrado_altas_mapfre(asegurados: list[dict], no_poliza: str, sal
         ws.write(fila_idx, 10, _calcular_edad(fecha_nac), estilo_celda)
         ws.write(fila_idx, 11, a["sexo"], estilo_celda)  # 'M' o 'F'
         ws.write(fila_idx, 20, hoy, formato_fecha)  # F.de Inicio de vig. del asegurado
+
 
     wb.save(salida)
     return salida
