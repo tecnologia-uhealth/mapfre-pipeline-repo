@@ -27,6 +27,7 @@ captura del modal final, con el mismo valor mostrado desde el paso 5.
 
 import os
 import re
+import base64
 import logging
 from playwright.sync_api import sync_playwright
 
@@ -48,6 +49,15 @@ class TipoMovimientoNoConfirmadoError(Exception):
     """Se lanza si se pide un tipo_movimiento distinto de 'alta'/'baja'
     (los únicos 2 confirmados con grabaciones reales)."""
     pass
+
+
+class RPAError(Exception):
+    """Envuelve cualquier error real del RPA (selector no encontrado, timeout,
+    etc.) junto con una captura de pantalla en base64 del momento exacto del
+    fallo, para poder diagnosticar sin tener que correrlo con headless=False."""
+    def __init__(self, mensaje, screenshot_base64=None):
+        super().__init__(mensaje)
+        self.screenshot_base64 = screenshot_base64
 
 
 def emitir_movimiento_mapfre(
@@ -154,6 +164,19 @@ def emitir_movimiento_mapfre(
             folio = match.group(1) if match else "FOLIO_NO_DETECTADO"
 
             page.get_by_role("button", name="Aceptar").click()
+
+        except Exception as e:
+            # Captura de pantalla en el momento exacto del error, para poder
+            # diagnosticar qué pasaba en el navegador sin necesidad de
+            # correrlo localmente con headless=False.
+            screenshot_b64 = None
+            try:
+                screenshot_bytes = page.screenshot(full_page=True)
+                screenshot_b64 = base64.b64encode(screenshot_bytes).decode()
+            except Exception as e_screenshot:
+                log.warning(f"No se pudo tomar captura de pantalla del error: {e_screenshot}")
+
+            raise RPAError(str(e), screenshot_base64=screenshot_b64) from e
 
         finally:
             context.close()
